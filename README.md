@@ -39,8 +39,9 @@ validation.
 | rf_both_all     |     153 | 0.9286 | 0.8500 | 87.6%    |
 | **mlp_both_all**| **153** | **0.9339** | **0.8620** | **87.9%** |
 
-## Quick install
+## Quick start
 
+**Install:**
 ```bash
 # Recommended: conda (includes OpenMM/PDBFixer for feature extraction)
 conda env create -f environment.yml
@@ -50,9 +51,7 @@ conda activate openbinder
 pip install -r requirements.txt
 ```
 
-## Quick start
-
-Score a directory of VHH–antigen PDB files:
+**Score a directory of VHH–antigen PDB files:**
 
 ```bash
 python scripts/v3/score.py \
