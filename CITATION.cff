@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+title: "OpenBinder: Predicting Nanobody-Antigen Binding from Interface Energy Decomposition, Interatomic Contacts, and Sequence-Language Features Across Restrained and Unrestrained Relaxation States"
+message: "If you use this software, please cite the paper (TBD)."
+type: software
+version: "1.0.0"
+date-released: 2026-04-19
+authors:
+  - family-names: "Figueroa Rivera"
+    given-names: "Luis Eduardo"
+    email: "luisfigueroa9030@gmail.com"
+    alias: "lef.rivera.2021@aluno.unila.edu.br"
+  - family-names: "Rojas"
+    given-names: "Cristian Antonio"
+    email: "cristian.rojas@unila.edu.br"
+repository-code: "https://github.com/Lefrunila/Open-Binder"
+doi: "TBD"
+license: MIT
+keywords:
+  - nanobody
+  - VHH
+  - binding
+  - random forest
+  - protein-protein interaction
+  - OpenMM
+  - ESM
+  - AI-generated binders
+  - RFAntibody
+  - BoltzGen
+  - IgGM
+preferred-citation:
+  type: article
+  title: "OpenBinder: Predicting Nanobody-Antigen Binding from Interface Energy Decomposition, Interatomic Contacts, and Sequence-Language Features Across Restrained and Unrestrained Relaxation States"
+  authors:
+    - family-names: "Figueroa Rivera"
+      given-names: "Luis Eduardo"
+    - family-names: "Rojas"
+      given-names: "Cristian Antonio"
+  year: 2026
+  journal: "TBD"
+  # DOI / volume / pages TBD

@@ -1,0 +1,18 @@
+# Minimum runtime dependencies for OpenBinder training and inference.
+# These are sufficient to run everything in scripts/v3/ against the
+# pre-computed feature CSVs shipped in data/. See environment.yml for the
+# full conda environment (which also includes OpenMM/PDBFixer for feature
+# extraction from raw PDBs).
+numpy==1.26.4
+pandas>=2.0
+scipy
+scikit-learn==1.7.2
+scikit-image>=0.21
+joblib
+pyyaml
+tqdm
+torch>=2.1
+biopython>=1.83
+matplotlib>=3.7
+seaborn>=0.13
+gdown>=5.1

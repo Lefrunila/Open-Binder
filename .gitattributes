@@ -1,0 +1,12 @@
+# Large binary tarballs of the raw PDB set (~1.1 GB combined).
+# Tracked via Git LFS to keep the plain-Git working tree lean and to avoid
+# the >2 GB repo-size warning from GitHub/GitLab.
+#
+# To fetch the tarballs after cloning:
+#   git lfs install        # once per machine
+#   git lfs pull           # inside this repo
+#
+# If you do not have git-lfs installed, the tarballs will appear as small
+# plaintext pointer files. Install git-lfs
+# (https://git-lfs.com) or download the tarballs out-of-band.
+data/structures/*.tar.gz filter=lfs diff=lfs merge=lfs -text

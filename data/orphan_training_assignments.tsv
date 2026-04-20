@@ -1,0 +1,6 @@
+orphan_file	host_positive_stem	slot	notes
+neg_1MHP_cleaned__vhh_3ZKX_0_cleaned_2.pdb	7D30_1_cleaned	1	sidecar_promoted_2026-04-18; antigen_provenance=1MHP (purged fab-chaperone); training asymmetry — LOO fold for 7D30_1 holds out {pos, orig_neg, this_orphan}
+neg_3V7A_cleaned__vhh_2P47_cleaned_1.pdb	7PH3_cleaned	1	sidecar_promoted_2026-04-18; antigen_provenance=3V7A (purged fab-chaperone)
+neg_6ZCZ_1_cleaned__vhh_9ERW_cleaned_2.pdb	8X7N_0_cleaned	1	sidecar_promoted_2026-04-18; antigen_provenance=6ZCZ_1 (purged fab-chaperone)
+neg_8ACI_cleaned__vhh_7BTS_cleaned_1.pdb	5JMO_cleaned	2	sidecar_promoted_2026-04-18; antigen_provenance=8ACI (purged fab-chaperone)
+neg_5FYL_cleaned__vhh_1OP9_cleaned_2.pdb	8BVT_cleaned	2	sidecar_promoted_2026-04-18; replaces NaN-failed neg_8BVT__vhh_8AJB_2_2; antigen_provenance=5FYL (purged fab-chaperone); training asymmetry — LOO fold for 8BVT holds out {pos, neg_8BVT__vhh_4W6X_1, this_orphan}

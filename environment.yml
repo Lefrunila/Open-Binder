@@ -1,0 +1,33 @@
+name: openbinder
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - python=3.10
+  # ── Training / inference (required) ──────────────────────────────────────
+  - numpy=1.26.4
+  - pandas
+  - scipy
+  - scikit-learn==1.7.2
+  - joblib
+  - pyyaml
+  - tqdm
+  - pytorch>=2.1
+  - pytorch-cuda=11.8           # remove / replace if CPU-only
+  # ── Feature extraction (optional: only needed to compute features for
+  # new structures — the shipped CSVs already cover the training cohort)
+  - cudatoolkit=11.8
+  - openmm=8.0.0
+  - pdbfixer=1.9
+  - mdtraj=1.10.3
+  - biopython>=1.83
+  - scikit-image>=0.21
+  - matplotlib>=3.7
+  - seaborn>=0.13
+  - prody>=2.4
+  - pip
+  - pip:
+    - httpx
+    - gdown>=5.1

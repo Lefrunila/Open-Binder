@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.so
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Large / derived data
+*.pdb
+*.bak
+*.bak_*
+*.bak2
+*.bak3
+*.dcd
+*.nc
+*.xtc
+*.jsonl
+*.tmp
+
+# Model binaries (large; use Git LFS or distribute separately)
+*.pkl
+*.pt
+*.joblib
+
+# Model checkpoint directories (ship via LFS or release assets, not plain git)
+models/checkpoints/
+models/loo/
+
+# Training output directories (regeneratable from configs + data)
+models/runs/
+models/loo_rerun/
+models/loo_connolly_sc/
+
+# Results / intermediate outputs
+results/
+results/logs_*/
+intermediates/
+
+# Large data files excluded from git (available on Google Drive)
+data/esm_ppi_*.csv
+data/structures/
+data/*.bak_*
+data/*.log
+
+# Exceptions: always include these specific files
+!examples/9YC3_relaxed.pdb
+!models/checkpoints/*/meta.json
+!models/checkpoints/*/metrics.json
+!models/loo/*/pooled_metrics.json
+!models/loo/*/pass_rate_by_antigen.csv
+!models/loo_connolly_sc/*/pooled_metrics.json
+!models/loo_connolly_sc/*/pass_rate_by_antigen.csv
+
+# Logs
+logs/
+*.log
+
+# Internal audit files (not for public release)
+AUDIT_REPORT.md
+
+# Test run outputs in examples/
+examples/orphan_test_output/

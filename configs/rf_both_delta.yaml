@@ -1,0 +1,33 @@
+config_name: rf_both_delta
+model_type: rf
+feature_mode: both_delta
+feature_sources:
+  openmm_rest: data/features_positives_openmm_v2.csv
+  openmm_rest_neg: data/features_negatives_openmm_v2.csv
+  openmm_unrest: data/features_positives_openmm_unrest.csv
+  openmm_unrest_neg: data/features_negatives_openmm_unrest.csv
+  cocada: data/cocada_positives_v2.csv
+  cocada_neg: data/cocada_negatives_v2.csv
+  esm: data/esm_ppi_positives.csv
+  esm_neg: data/esm_ppi_negatives.csv
+esm_pca_dims: 64
+rf:
+  n_estimators: 500
+  max_depth: null
+  min_samples_split: 2
+  class_weight: balanced
+  random_state: 42
+mlp:
+  hidden_dims: [256, 128]
+  dropout: 0.3
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  batch_size: 64
+  max_epochs: 100
+  patience: 10
+hold_out:
+  orphan_assignments_tsv: data/orphan_training_assignments.tsv
+  held_out_orphans_tsv: data/held_out_orphans.tsv
+  drop_error_rows: true
+cohort:
+  use_intersection: true
