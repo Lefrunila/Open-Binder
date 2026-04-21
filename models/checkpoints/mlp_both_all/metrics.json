@@ -1,0 +1,8 @@
+{
+  "n_train": 2878,
+  "n_val": 509,
+  "auroc_val": 0.9396494881138296,
+  "auprc_val": 0.8641346045925689,
+  "accuracy_val": 0.8565815324165029,
+  "n_epochs_trained": 21
+}

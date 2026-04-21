@@ -74,9 +74,9 @@ ASSETS = {
         # the real file ID.  Generate locally with: python scripts/v3/rf_train.py
         # (or mlp_train.py) — datamodule.prepare() now saves it automatically.
         "esm_pca": {
-            "id": "TBD",
+            "id": "1XyCU4pnKl5AhwYax-d1vChSO38guNDSO",
             "dest": "models/checkpoints/esm_pca.joblib",
-            "size_bytes": 0,   # update after first upload
+            "size_bytes": 864818,
         },
     },
     "structures": {

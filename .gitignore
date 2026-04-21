@@ -40,8 +40,7 @@ Thumbs.db
 *.pt
 *.joblib
 
-# Model checkpoint directories (ship via LFS or release assets, not plain git)
-models/checkpoints/
+# Model checkpoint output dirs (large binaries excluded by *.joblib/*.pt/*.pkl above)
 models/loo/
 
 # Training output directories (regeneratable from configs + data)

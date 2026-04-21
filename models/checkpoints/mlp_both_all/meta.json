@@ -1,0 +1,16 @@
+{
+  "config_name": "mlp_both_all",
+  "model_type": "mlp",
+  "feature_mode": "both_all",
+  "esm_pca_dims": 64,
+  "n_samples": 3387,
+  "n_pos": 1129,
+  "n_neg": 2258,
+  "hidden_dims": [
+    256,
+    128
+  ],
+  "dropout": 0.3,
+  "device": "cuda",
+  "created_at": "2026-04-19T20:14:47"
+}
