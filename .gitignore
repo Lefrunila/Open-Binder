@@ -64,6 +64,7 @@ data/*.log
 !examples/9YC3_relaxed.pdb
 !models/checkpoints/*/meta.json
 !models/checkpoints/*/metrics.json
+!models/checkpoints/esm_pca.joblib
 !models/loo/*/pooled_metrics.json
 !models/loo/*/pass_rate_by_antigen.csv
 !models/loo_connolly_sc/*/pooled_metrics.json

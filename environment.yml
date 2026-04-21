@@ -14,8 +14,7 @@ dependencies:
   - joblib
   - pyyaml
   - tqdm
-  - pytorch>=2.1
-  - pytorch-cuda=11.8           # remove / replace if CPU-only
+  - setuptools<71             # setuptools>=71 breaks pdbfixer (Bug 1)
   # ── Feature extraction (optional: only needed to compute features for
   # new structures — the shipped CSVs already cover the training cohort)
   - cudatoolkit=11.8
@@ -29,5 +28,7 @@ dependencies:
   - prody>=2.4
   - pip
   - pip:
+    - torch==2.1.0+cu118 --index-url https://download.pytorch.org/whl/cu118
     - httpx
     - gdown>=5.1
+    - ml-collections

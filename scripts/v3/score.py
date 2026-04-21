@@ -54,6 +54,21 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+
+# =============================================================================
+# OpenMM CUDA helper (Bug 3 fix)
+# =============================================================================
+
+def _openmm_has_cuda() -> bool:
+    """Return True only when OpenMM itself was compiled with CUDA support."""
+    try:
+        import openmm as mm
+        return "CUDA" in [mm.Platform.getPlatform(i).getName()
+                          for i in range(mm.Platform.getNumPlatforms())]
+    except Exception:
+        return False
+
+
 # ── Resolve script dir and project root ─────────────────────────────────────
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent    # Open-Binder/
@@ -237,6 +252,11 @@ def _relax_unrestrained_worker(args: tuple) -> dict:
         if prep["status"] != "READY":
             return {"file": fname, "status": "ERROR", "msg": prep.get("msg", "prep failed")}
         result = mod.minimize_one(prep)
+        # CUDA→CPU fallback: if CUDA minimization failed, retry on CPU
+        if result["status"] != "OK" and platform == "cuda":
+            prep_cpu = mod.prepare_one_no_restraints(pdb_in, pdb_out, ("CPU", {}))
+            if prep_cpu["status"] == "READY":
+                result = mod.minimize_one(prep_cpu)
         return {"file": fname, "status": result["status"],
                 "msg": result.get("msg", "")}
     except Exception as e:
@@ -626,10 +646,10 @@ def assemble_features(
     openmm_df: pd.DataFrame,
     cocada_df: pd.DataFrame,
     esm_df: pd.DataFrame,
-    training_data_dir: Path,
+    training_data_dir: Path,  # kept for API compatibility; no longer used (Bug 7 fix)
     logger: logging.Logger,
 ) -> pd.DataFrame | None:
-    """Merge all feature blocks and apply ESM PCA using training cohort."""
+    """Merge all feature blocks and apply the saved ESM PCA transform."""
     from feature_combine import OPENMM_COLS_27, COCADA_COLS_4, esm_pca_cols, unrest_suffix
 
     # Inner-join all feature sources on 'file'
@@ -652,59 +672,35 @@ def assemble_features(
         esm_feat_cols = []
 
     # ── ESM PCA ─────────────────────────────────────────────────────────────
-    # Fit PCA on the training cohort to match what the models expect.
-    # The training cohort ESM CSVs must be reachable.
+    # Load the PCA transform that was saved at training time.
+    # Do NOT refit at inference — doing so produces a different embedding
+    # space than the one the models were trained on (Bug 7 fix).
     n_esm = 64
     pca_cols = esm_pca_cols(n_esm)
     if esm_feat_cols:
         try:
-            from sklearn.decomposition import PCA
+            import joblib as _joblib
 
-            # Load training ESM (positives + negatives combined)
-            tr_esm_pos = training_data_dir / "esm_ppi_positives.csv"
-            tr_esm_neg = training_data_dir / "esm_ppi_negatives.csv"
-
-            if tr_esm_pos.exists() and tr_esm_neg.exists():
-                tr_esm = pd.concat([
-                    pd.read_csv(tr_esm_pos),
-                    pd.read_csv(tr_esm_neg),
-                ], ignore_index=True)
-                tr_esm_feats = [c for c in tr_esm.columns if c != "file"]
-                Xtr = tr_esm[tr_esm_feats].values.astype(np.float32)
-                mean = Xtr.mean(axis=0)
-                std = Xtr.std(axis=0) + 1e-8
-                Xs_tr = (Xtr - mean) / std
-                pca = PCA(n_components=n_esm, random_state=42)
-                pca.fit(Xs_tr)
-
-                # Project inference ESM features
-                Xinf = merged[esm_feat_cols].values.astype(np.float32)
-                Xs_inf = (Xinf - mean) / std
-                Z = pca.transform(Xs_inf).astype(np.float32)
-
-                for i, pc in enumerate(pca_cols):
-                    merged[pc] = Z[:, i]
-                merged.drop(columns=esm_feat_cols, inplace=True)
-                logger.info(f"[assemble] ESM PCA fit on {len(Xtr)} training samples → {n_esm} dims")
-            else:
-                logger.warning(
-                    "[assemble] Training ESM CSVs not found — fitting PCA on inference data only "
-                    f"(looked for {tr_esm_pos}). Scores may differ from training calibration."
+            pca_path = PROJECT_ROOT / "models" / "checkpoints" / "esm_pca.joblib"
+            if not pca_path.exists():
+                raise FileNotFoundError(
+                    f"ESM PCA transform not found at {pca_path}. "
+                    "Run scripts/v3/fit_esm_pca.py to generate it, or download it with "
+                    "python scripts/download_assets.py --weights"
                 )
-                Xinf = merged[esm_feat_cols].values.astype(np.float32)
-                mean = Xinf.mean(axis=0)
-                std = Xinf.std(axis=0) + 1e-8
-                Xs = (Xinf - mean) / std
-                pca = PCA(n_components=min(n_esm, Xinf.shape[0] - 1, Xinf.shape[1]),
-                          random_state=42)
-                Z = pca.fit_transform(Xs).astype(np.float32)
-                # Pad to n_esm dims if needed
-                if Z.shape[1] < n_esm:
-                    pad = np.zeros((Z.shape[0], n_esm - Z.shape[1]), dtype=np.float32)
-                    Z = np.concatenate([Z, pad], axis=1)
-                for i, pc in enumerate(pca_cols):
-                    merged[pc] = Z[:, i]
-                merged.drop(columns=esm_feat_cols, inplace=True)
+            bundle = _joblib.load(pca_path)
+            pca = bundle["pca"]
+            mean = np.asarray(bundle["mean"], dtype=np.float32)
+            std = np.asarray(bundle["std"], dtype=np.float32)
+
+            Xinf = merged[esm_feat_cols].values.astype(np.float32)
+            Xs_inf = (Xinf - mean) / std
+            Z = pca.transform(Xs_inf).astype(np.float32)
+
+            for i, pc in enumerate(pca_cols):
+                merged[pc] = Z[:, i]
+            merged.drop(columns=esm_feat_cols, inplace=True)
+            logger.info(f"[assemble] ESM PCA loaded from {pca_path} → {n_esm} dims applied")
         except Exception as e:
             logger.error(f"[assemble] ESM PCA failed: {e}")
             for pc in pca_cols:
@@ -829,7 +825,7 @@ def score_mlp(
 
     with torch.no_grad():
         logits = model(Xt).squeeze(-1)
-        probs = torch.sigmoid(logits).cpu().numpy()
+        probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
 
     logger.info(f"[mlp] Loaded checkpoint: {model_path}, device={device_str}, scored {len(probs)} samples")
     return probs
@@ -895,12 +891,7 @@ def main() -> None:
         logger.info(f"[step2] --skip-relaxation: using existing {rest_dir}")
     else:
         logger.info("[step2] Running restrained relaxation ...")
-        try:
-            import torch
-            has_cuda = torch.cuda.is_available()
-        except ImportError:
-            has_cuda = False
-        platform = "cuda" if has_cuda else "cpu"
+        platform = "cuda" if _openmm_has_cuda() else "cpu"
         logger.info(f"[step2] Platform: {platform}")
 
         rest_results = run_relaxation(
@@ -916,12 +907,7 @@ def main() -> None:
         logger.info(f"[step3] --skip-relaxation: using existing {unrest_dir}")
     else:
         logger.info("[step3] Running unrestrained relaxation ...")
-        try:
-            import torch
-            has_cuda = torch.cuda.is_available()
-        except ImportError:
-            has_cuda = False
-        platform = "cuda" if has_cuda else "cpu"
+        platform = "cuda" if _openmm_has_cuda() else "cpu"
 
         unrest_results = run_relaxation(
             input_pdbs, unrest_dir, "unrest",

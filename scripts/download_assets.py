@@ -70,6 +70,14 @@ ASSETS = {
             "dest": "models/checkpoints/mlp_both_all/model.pt",
             "size_bytes": 303943,
         },
+        # NOTE: upload esm_pca.joblib to Google Drive and replace "TBD" with
+        # the real file ID.  Generate locally with: python scripts/v3/rf_train.py
+        # (or mlp_train.py) — datamodule.prepare() now saves it automatically.
+        "esm_pca": {
+            "id": "TBD",
+            "dest": "models/checkpoints/esm_pca.joblib",
+            "size_bytes": 0,   # update after first upload
+        },
     },
     "structures": {
         "positives_cleaned": {

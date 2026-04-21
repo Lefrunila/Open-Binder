@@ -279,6 +279,7 @@ class DataModule:
         X: np.ndarray,
         n_dims: int | None = None,
         fit: bool = True,
+        save_path: Path | None = None,
     ) -> np.ndarray:
         """Fit (or reuse) a PCA on the ESM embedding block and project.
 
@@ -286,6 +287,10 @@ class DataModule:
         ``fit=False`` applies the cached projection (used for LOO folds where
         the PCA is fit once on the full cohort so every fold sees a
         consistent embedding space).
+
+        ``save_path``: if provided and fit=True, the fitted PCA object (along
+        with the scaler mean/std) is saved to this path via joblib so that
+        inference can load it without access to the training data (Bug 7 fix).
 
         We do NOT refit per-fold by default: the ESM embedding is a
         sample-level sequence representation, so leakage risk is minimal
@@ -305,22 +310,40 @@ class DataModule:
             self._pca = pca
             self._esm_scaler_mean = mean
             self._esm_scaler_std = std
+            if save_path is not None:
+                import joblib as _joblib
+                save_path = Path(save_path)
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+                _joblib.dump(
+                    {"pca": pca, "mean": mean, "std": std},
+                    save_path,
+                )
+                print(f"[datamodule] ESM PCA saved to {save_path}", flush=True)
             return Z
         # reuse cached scaler + PCA
         Xs = (X - self._esm_scaler_mean) / self._esm_scaler_std
         return self._pca.transform(Xs).astype(np.float32)
 
-    def attach_esm_pca(self, df: pd.DataFrame, fit: bool = True) -> pd.DataFrame:
+    def attach_esm_pca(
+        self,
+        df: pd.DataFrame,
+        fit: bool = True,
+        save_path: Path | None = None,
+    ) -> pd.DataFrame:
         """Replace raw ESM embedding columns with ``esm_pca_*`` columns.
 
         Called once per training run (fit=True) or once per LOO campaign
         (fit=True on the full cohort; subsequent folds reuse via fit=False).
+
+        ``save_path``: forwarded to ``esm_pca()`` — if provided and fit=True,
+        the fitted PCA bundle is persisted so inference can load it without
+        the training data (Bug 7 fix).
         """
         if not self._esm_feat_cols:
             return df
         X = df[self._esm_feat_cols].values.astype(np.float32)
         n_dims = int(self.config.get("esm_pca_dims", 64))
-        Z = self.esm_pca(X, n_dims=n_dims, fit=fit)
+        Z = self.esm_pca(X, n_dims=n_dims, fit=fit, save_path=save_path)
         pca_cols = esm_pca_cols(n_dims)
         out = df.drop(columns=self._esm_feat_cols).copy()
         for i, c in enumerate(pca_cols):
@@ -328,11 +351,20 @@ class DataModule:
         return out
 
     # ── Convenience: full pipeline ───────────────────────────────────────
-    def prepare(self) -> pd.DataFrame:
-        """Run the full load → hold-out → error-drop → PCA pipeline."""
+    def prepare(self, save_esm_pca: Path | None = None) -> pd.DataFrame:
+        """Run the full load → hold-out → error-drop → PCA pipeline.
+
+        ``save_esm_pca``: if provided, the fitted ESM PCA bundle
+        (pca + scaler mean/std) is saved to this path via joblib so that
+        inference can load it without the training data (Bug 7 fix).
+        When None, defaults to ``models/checkpoints/esm_pca.joblib``
+        relative to the project root so training always produces the file.
+        """
+        if save_esm_pca is None:
+            save_esm_pca = self.project_root / "models" / "checkpoints" / "esm_pca.joblib"
         df = self.load_features()
         df = self.apply_holdout(df)
         if self.config.get("hold_out", {}).get("drop_error_rows", True):
             df = self.drop_error_rows(df)
-        df = self.attach_esm_pca(df, fit=True)
+        df = self.attach_esm_pca(df, fit=True, save_path=save_esm_pca)
         return df

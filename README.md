@@ -93,6 +93,12 @@ classified as "binder".
 | `--esm-checkpoint` | `$ESM_CHECKPOINT` | Path to `esm_ppi_650m_ab.pth` (overrides `$ESM_CHECKPOINT` env var; or use `python scripts/download_assets.py --esm` to download). Download from [Zenodo](https://zenodo.org/records/16909543) |
 | `--cocada-path` | `$COCADA_ROOT` | Path to COCaDA repo root (overrides `COCADA_ROOT` env var). Clone from [GitHub](https://github.com/rplemos/COCaDA) |
 
+**ESM step — IgGM dependency:** The ESM step requires the IgGM PPIModel class. Set `PYTHONPATH` to include the IgGM repo root, or download the IgGM source:
+
+```bash
+git clone https://github.com/AstraZeneca/IgGM && export PYTHONPATH=$PWD/IgGM:$PYTHONPATH
+```
+
 ## Dataset
 
 | Quantity | Value |
