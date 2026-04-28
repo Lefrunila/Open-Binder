@@ -96,7 +96,7 @@ classified as "binder".
 **ESM step — IgGM dependency:** The ESM step requires the IgGM PPIModel class. Set `PYTHONPATH` to include the IgGM repo root, or download the IgGM source:
 
 ```bash
-git clone https://github.com/AstraZeneca/IgGM && export PYTHONPATH=$PWD/IgGM:$PYTHONPATH
+git clone https://github.com/TencentAI4S/IgGM && export PYTHONPATH=$PWD/IgGM:$PYTHONPATH
 ```
 
 ## Dataset
