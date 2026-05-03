@@ -97,10 +97,10 @@ def save_fig(fig: plt.Figure, name: str) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Figure 1: Score distributions — RF vs MLP
+# Figure 4 (manuscript): Score distributions — RF vs MLP
 # ─────────────────────────────────────────────────────────────────────────────
-def make_fig1() -> None:
-    print("Generating Figure 1 …")
+def make_fig4_score_distributions() -> None:
+    print("Generating Figure 4 (score distributions) …")
     rf_pos,  rf_neg  = load_per_fold("rf_both_all")
     mlp_pos, mlp_neg = load_per_fold("mlp_both_all")
 
@@ -141,15 +141,15 @@ def make_fig1() -> None:
                           edgecolor=LGRAY, alpha=0.9))
 
     fig.tight_layout()
-    save_fig(fig, "fig1")
+    save_fig(fig, "fig4")
     plt.close(fig)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Figure 2: RF–MLP complementarity scatter
+# Figure 5 (manuscript): RF–MLP complementarity scatter
 # ─────────────────────────────────────────────────────────────────────────────
-def make_fig2() -> None:
-    print("Generating Figure 2 …")
+def make_fig5_rf_mlp_scatter() -> None:
+    print("Generating Figure 5 (RF–MLP scatter) …")
     # Build paired (rf_score, mlp_score, label) per structure
     rf_dir  = find_loo_dir("rf_both_all")  / "per_fold"
     mlp_dir = find_loo_dir("mlp_both_all") / "per_fold"
@@ -225,18 +225,18 @@ def make_fig2() -> None:
     ax.legend(fontsize=9, loc="upper left", framealpha=0.9)
 
     fig.tight_layout()
-    save_fig(fig, "fig2")
+    save_fig(fig, "fig5")
     plt.close(fig)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Figure 3: Feature importance (rf_both_all)
+# Figure 6 (manuscript): Feature importance (rf_both_all)
 # ─────────────────────────────────────────────────────────────────────────────
-def make_fig3() -> None:
-    print("Generating Figure 3 …")
+def make_fig6_feature_importance() -> None:
+    print("Generating Figure 6 (feature importances) …")
     feat_csv = CHECKPOINT_DIR / "feature_importances.csv"
     if not feat_csv.exists():
-        print(f"  WARNING: {feat_csv} not found — skipping Fig 3")
+        print(f"  WARNING: {feat_csv} not found — skipping Fig 6")
         return
 
     df = pd.read_csv(feat_csv)
@@ -309,15 +309,15 @@ def make_fig3() -> None:
     ax.legend(handles=patches, fontsize=8.5, loc="lower right", framealpha=0.9)
 
     fig.tight_layout()
-    save_fig(fig, "fig3")
+    save_fig(fig, "fig6")
     plt.close(fig)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Figure 4: LOO ablation — AUROC by feature mode
+# Figure 2 (manuscript): LOO ablation — AUROC/AUPRC by feature mode
 # ─────────────────────────────────────────────────────────────────────────────
-def make_fig4() -> None:
-    print("Generating Figure 4 …")
+def make_fig2_ablation() -> None:
+    print("Generating Figure 2 (ablation) …")
 
     models_ordered = [
         ("rf_rest",       "rf_rest"),
@@ -387,15 +387,15 @@ def make_fig4() -> None:
                 va="center", fontsize=7.5, color="black")
 
     fig.tight_layout()
-    save_fig(fig, "fig4")
+    save_fig(fig, "fig2")
     plt.close(fig)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Figure 5: Precision-Recall curves — RF and MLP
+# Figure 3 (manuscript): Precision-Recall curves — RF and MLP
 # ─────────────────────────────────────────────────────────────────────────────
-def make_fig5() -> None:
-    print("Generating Figure 5 …")
+def make_fig3_pr_curves() -> None:
+    print("Generating Figure 3 (PR curves) …")
     from sklearn.metrics import precision_recall_curve, auc
 
     rf_pos,  rf_neg  = load_per_fold("rf_both_all")
@@ -430,15 +430,16 @@ def make_fig5() -> None:
     ax.legend(fontsize=9, framealpha=0.9)
 
     fig.tight_layout()
-    save_fig(fig, "fig5")
+    save_fig(fig, "fig3")
     plt.close(fig)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Figure 6: Calibration (reliability) diagrams — RF and MLP
+# Supplementary: Calibration (reliability) diagrams — RF and MLP
+# Not in the manuscript but kept as a supplementary figure (figS_calibration).
 # ─────────────────────────────────────────────────────────────────────────────
-def make_fig6() -> None:
-    print("Generating Figure 6 …")
+def make_fig_calibration() -> None:
+    print("Generating supplementary calibration figure …")
     from sklearn.calibration import calibration_curve
 
     rf_pos,  rf_neg  = load_per_fold("rf_both_all")
@@ -473,41 +474,59 @@ def make_fig6() -> None:
         ax.legend(fontsize=9, framealpha=0.9)
 
     fig.tight_layout()
-    save_fig(fig, "fig6")
+    save_fig(fig, "figS_calibration")
     plt.close(fig)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Figure 7: sc_connolly vs Rosetta SC validation (pre-computed, copy only)
+# Figure 1 (manuscript): sc_connolly vs Rosetta SC validation
+# (pre-computed by sc_connolly_validate.py and saved as sc_validation.{pdf,png};
+#  this function copies that artifact to the canonical fig1.{pdf,png} names.)
 # ─────────────────────────────────────────────────────────────────────────────
-def make_fig7() -> None:
-    print("Registering Figure 7 (sc_validation) …")
-    src = OUT_DIR / "sc_validation.pdf"
-    dst = OUT_DIR / "fig7.pdf"
-    if src.exists():
-        shutil.copy2(src, dst)
-        print(f"  Copied {src} → {dst}  ({dst.stat().st_size // 1024} KB)")
-    else:
-        print(f"  WARNING: {src} not found — skipping Fig 7")
+def make_fig1_sc_validation() -> None:
+    print("Registering Figure 1 (sc_validation) …")
+    for ext in ("pdf", "png"):
+        src = OUT_DIR / f"sc_validation.{ext}"
+        dst = OUT_DIR / f"fig1.{ext}"
+        if src.exists():
+            shutil.copy2(src, dst)
+            if COPY_DIR != OUT_DIR:
+                shutil.copy2(src, COPY_DIR / f"fig1.{ext}")
+            print(f"  Copied {src} → {dst}  ({dst.stat().st_size // 1024} KB)")
+        else:
+            print(f"  WARNING: {src} not found — skipping Fig 1.{ext}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    make_fig1()
-    make_fig2()
-    make_fig3()
-    make_fig4()
-    make_fig5()
-    make_fig6()
-    make_fig7()
+    # Manuscript-canonical figures (numbering follows OpenBinder paper):
+    #   Fig 1 — SC validation (Connolly vs Rosetta)
+    #   Fig 2 — LOO AUROC/AUPRC ablation across feature configurations
+    #   Fig 3 — Precision–recall curves (RF and MLP)
+    #   Fig 4 — Score distributions (RF vs MLP histograms)
+    #   Fig 5 — RF–MLP concordance scatter
+    #   Fig 6 — Top-20 Gini feature importances (rf_both_all)
+    # Supplementary:
+    #   figS_calibration — reliability diagrams (RF, MLP)
+    make_fig1_sc_validation()
+    make_fig2_ablation()
+    make_fig3_pr_curves()
+    make_fig4_score_distributions()
+    make_fig5_rf_mlp_scatter()
+    make_fig6_feature_importance()
+    make_fig_calibration()
 
     print("\nVerifying output files:")
-    for n in range(1, 8):
+    for n in range(1, 7):
         for ext in ("pdf", "png"):
             p = OUT_DIR / f"fig{n}.{ext}"
             status = f"{p.stat().st_size:,} bytes" if p.exists() else "MISSING"
             print(f"  fig{n}.{ext}: {status}")
+    for ext in ("pdf", "png"):
+        p = OUT_DIR / f"figS_calibration.{ext}"
+        status = f"{p.stat().st_size:,} bytes" if p.exists() else "MISSING"
+        print(f"  figS_calibration.{ext}: {status}")
 
     print("\nDone.")

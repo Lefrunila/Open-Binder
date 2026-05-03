@@ -21,14 +21,14 @@ validation.
 - **Best model** (MLP, `both_all`): LOO AUROC 0.9345, AUPRC 0.8642, pass rate 87.9%
 
 > **Use both models together to decide what goes to the wet lab.**
-> The RF and MLP fail on different structures. Running them in sequence: RF as a
-> high-specificity first pass, MLP to recover borderline cases the RF misses. That cuts
-> the candidate library more aggressively than either model alone before committing
-> to experimental validation.
+> The RF and MLP fail on different structures. Treat the two scores as paired
+> predictions: candidates that both models score above your chosen threshold are
+> the highest-confidence priorities, and disagreements between the geometry-oriented
+> RF and the sequence-oriented MLP flag candidates that warrant closer inspection.
 
 ## Model performance (LOO)
 
-![Figure 4. Score distributions on the leave-one-out pool. Binding-probability histograms for true positives (blue) and true negatives (red) for rf_both_all (left) and mlp_both_all (right) at threshold 0.5.](docs/figures/fig1.png)
+![Figure 4. Score distributions on the leave-one-out pool. Binding-probability histograms for true positives (blue) and true negatives (red) for rf_both_all (left) and mlp_both_all (right) at threshold 0.5.](docs/figures/fig4.png)
 
 | Model           | Features | AUROC  | AUPRC  | Pass rate |
 |-----------------|--------:|------:|------:|----------:|
