@@ -15,7 +15,7 @@ Pipeline steps
 6. ESM-2 feature extraction  → intermediates/features_esm.csv
 7. Feature assembly via feature_combine.assemble_matrix (both_all, 153 dims)
 8. Load checkpoint(s) and score
-9. Write scores.csv sorted by ensemble_score descending
+9. Write scores.csv sorted by rf_score descending (when mode=both)
 
 Usage
 -----
@@ -1021,9 +1021,6 @@ def main() -> None:
         rf_s = float(rf_scores[i]) if rf_scores is not None else float("nan")
         mlp_s = float(mlp_scores[i]) if mlp_scores is not None else float("nan")
 
-        available = [s for s in [rf_s, mlp_s] if not math.isnan(s)]
-        ens_s = float(np.mean(available)) if available else float("nan")
-
         rf_lbl = ("binder" if rf_s >= 0.5 else "non-binder") if not math.isnan(rf_s) else "N/A"
         mlp_lbl = ("binder" if mlp_s >= 0.5 else "non-binder") if not math.isnan(mlp_s) else "N/A"
 
@@ -1031,7 +1028,6 @@ def main() -> None:
             "pdb_name": fname,
             "rf_score": rf_s,
             "mlp_score": mlp_s,
-            "ensemble_score": ens_s,
             "rf_label": rf_lbl,
             "mlp_label": mlp_lbl,
         })
@@ -1044,19 +1040,20 @@ def main() -> None:
                 "pdb_name": fname,
                 "rf_score": float("nan"),
                 "mlp_score": float("nan"),
-                "ensemble_score": float("nan"),
                 "rf_label": "N/A",
                 "mlp_label": "N/A",
             })
 
     scores_df = pd.DataFrame(result_rows)
-    scores_df = scores_df.sort_values("ensemble_score", ascending=False, na_position="last")
+    # Sort by RF (the documented primary scorer) in both/rf modes; by MLP in mlp-only mode
+    sort_col = "mlp_score" if args.mode == "mlp" else "rf_score"
+    scores_df = scores_df.sort_values(sort_col, ascending=False, na_position="last")
     scores_csv = out_root / "scores.csv"
     scores_df.to_csv(scores_csv, index=False)
 
     # ── Summary ──────────────────────────────────────────────────────────────
-    n_scored = int(scores_df["ensemble_score"].notna().sum())
-    n_nan = int(scores_df["ensemble_score"].isna().sum())
+    n_scored = int(scores_df[sort_col].notna().sum())
+    n_nan = int(scores_df[sort_col].isna().sum())
     n_failed = len(failed)
     n_binder_rf = int((scores_df["rf_label"] == "binder").sum()) if rf_scores is not None else 0
     n_binder_mlp = int((scores_df["mlp_label"] == "binder").sum()) if mlp_scores is not None else 0

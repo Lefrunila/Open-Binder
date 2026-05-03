@@ -77,9 +77,10 @@ results/
     features_esm.csv
 ```
 
-`scores.csv` columns: `pdb_name`, `rf_score`, `mlp_score`, `ensemble_score`,
-`rf_label`, `mlp_label`. Scores are binding probabilities in [0, 1]; >= 0.5 is
-classified as "binder".
+`scores.csv` columns: `pdb_name`, `rf_score`, `mlp_score`, `rf_label`,
+`mlp_label`. Scores are binding probabilities in [0, 1]; >= 0.5 is
+classified as "binder". Rows are sorted by `rf_score` descending (RF is the
+documented primary scorer); in `--mode mlp` the sort key is `mlp_score`.
 
 **CLI flags:**
 
