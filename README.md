@@ -107,9 +107,15 @@ git clone https://github.com/TencentAI4S/IgGM && export PYTHONPATH=$PWD/IgGM:$PY
 | Quantity | Value |
 |---|---|
 | Positive complexes | 1,129 |
-| Negative complexes | 2,258 (training cohort; 30 held-out files excluded) |
-| Total samples | 3,387 |
+| Negative complexes | 2,258 (LOO prediction pool; 30 held-out files excluded) |
+| Total samples | 3,387 (LOO prediction pool; 1,129 positives + 2,258 anchored negatives) |
 | LOO folds | 1,129 |
+
+The training cohort resident in `data/features_*_v2.csv` contains 3,388 rows
+(1,129 positives + 2,259 negatives). The 1-row gap relative to the LOO
+prediction pool is a single unanchored negative whose host positive is not in
+the positives cohort; it appears only as training data and is never evaluated
+(see §2.12 of the paper).
 
 Features: 27 OpenMM interface energetics (restrained + unrestrained), 4 COCaDA
 contact counts, 64 ESM-PPI sequence embedding PCA dimensions.
