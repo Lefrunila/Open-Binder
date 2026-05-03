@@ -178,35 +178,28 @@ def make_fig2() -> None:
     rf_neg_arr  = np.array(rf_scores_neg)
     mlp_neg_arr = np.array(mlp_scores_neg)
 
-    # Subsample negatives to 2000 for clarity
-    rng = np.random.default_rng(42)
+    n_pos = len(rf_pos_arr)
     n_neg = len(rf_neg_arr)
-    if n_neg > 2000:
-        idx = rng.choice(n_neg, 2000, replace=False)
-        rf_neg_arr  = rf_neg_arr[idx]
-        mlp_neg_arr = mlp_neg_arr[idx]
 
     fig, ax = plt.subplots(figsize=(7, 6.5))
 
-    ax.scatter(rf_neg_arr,  mlp_neg_arr,  color=RED,  alpha=0.2, s=8,
-               label="True negatives (subsample n=2 000)", zorder=2)
+    ax.scatter(rf_neg_arr,  mlp_neg_arr,  color=RED,  alpha=0.15, s=6,
+               label=f"True negatives (n={n_neg:,})", zorder=2)
     ax.scatter(rf_pos_arr,  mlp_pos_arr,  color=BLUE, alpha=0.4, s=15,
-               label="True positives", zorder=3)
+               label=f"True positives (n={n_pos:,})", zorder=3)
 
     ax.axhline(0.5, color="black", linestyle="--", linewidth=1.0)
     ax.axvline(0.5, color="black", linestyle="--", linewidth=1.0)
 
-    # Quadrant counts (full dataset)
-    all_rf  = np.concatenate([rf_pos_arr,  rf_neg_arr])
-    all_mlp = np.concatenate([mlp_pos_arr, mlp_neg_arr])
-    q_tr = int(np.sum((rf_pos_arr  >= 0.5) & (mlp_pos_arr  >= 0.5)))
-    q_tr_n = int(np.sum((rf_neg_arr  >= 0.5) & (mlp_neg_arr  >= 0.5)))
-    q_bl = int(np.sum((rf_pos_arr  < 0.5)  & (mlp_pos_arr  < 0.5)))
-    q_bl_n = int(np.sum((rf_neg_arr  < 0.5)  & (mlp_neg_arr  < 0.5)))
-    q_br = int(np.sum((rf_pos_arr  >= 0.5) & (mlp_pos_arr  < 0.5)))
-    q_br_n = int(np.sum((rf_neg_arr  >= 0.5) & (mlp_neg_arr  < 0.5)))
-    q_tl = int(np.sum((rf_pos_arr  < 0.5)  & (mlp_pos_arr  >= 0.5)))
-    q_tl_n = int(np.sum((rf_neg_arr  < 0.5)  & (mlp_neg_arr  >= 0.5)))
+    # Quadrant counts on the full dataset (all positives + all negatives).
+    q_tr   = int(np.sum((rf_pos_arr >= 0.5) & (mlp_pos_arr >= 0.5)))
+    q_tr_n = int(np.sum((rf_neg_arr >= 0.5) & (mlp_neg_arr >= 0.5)))
+    q_bl   = int(np.sum((rf_pos_arr <  0.5) & (mlp_pos_arr <  0.5)))
+    q_bl_n = int(np.sum((rf_neg_arr <  0.5) & (mlp_neg_arr <  0.5)))
+    q_br   = int(np.sum((rf_pos_arr >= 0.5) & (mlp_pos_arr <  0.5)))
+    q_br_n = int(np.sum((rf_neg_arr >= 0.5) & (mlp_neg_arr <  0.5)))
+    q_tl   = int(np.sum((rf_pos_arr <  0.5) & (mlp_pos_arr >= 0.5)))
+    q_tl_n = int(np.sum((rf_neg_arr <  0.5) & (mlp_neg_arr >= 0.5)))
 
     label_kw = dict(fontsize=8.5, ha="center", va="center",
                     bbox=dict(facecolor="white", edgecolor=LGRAY,
