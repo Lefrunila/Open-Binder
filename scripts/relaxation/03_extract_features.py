@@ -113,10 +113,11 @@ def _atoms_to_xyzr(pdb_path: str, chain_ids: list) -> np.ndarray:
 
 def compute_sc(pdb_path: str, chain_a: list, chain_b: list) -> float | None:
     """Compute shape complementarity using sc_connolly (Connolly SES, open-source).
-    
+
     Replaces the prior MSMS-based implementation. Uses the same Lawrence-Colman
     dot-product statistic but computed on a grid-based Connolly SES surface,
-    achieving Pearson r=0.837 vs Rosetta/MSMS on 50 crystal structures.
+    achieving Pearson r=0.564, Spearman rho=0.611, MAE=0.025 vs Rosetta/MSMS
+    on the full N=1,129 positive cohort.
     """
     vhh_chain = chain_a[0] if chain_a else "H"
     try:

@@ -13,7 +13,7 @@ The prior implementation used a Solvent Accessible Surface (SAS): each atom's va
 These concave patches are the defining feature of the true Connolly SES. At the interface between two protein chains, the re-entrant patches have normals that point sideways or away from the local contact direction — exactly the geometry that penalises poor shape fit. Without them, the dot-product scores are systematically inflated and compressed, producing:
 
 - SAS-based SC: Pearson r ≈ 0.50 vs Rosetta MSMS
-- SES-based SC (this implementation): Pearson r = **0.837** vs Rosetta MSMS (N=50)
+- SES-based SC (this implementation): Pearson r = **0.564**, Spearman ρ = **0.611**, MAE = **0.025** vs Rosetta MSMS (N = 1,129, full positive cohort)
 
 ---
 
@@ -78,13 +78,14 @@ After building per-chain SES meshes:
 
 ## Validation vs Rosetta MSMS
 
-Validated on 50 nanobody–antigen crystal structures from the OpenBinder training set. Rosetta SC values were computed via InterfaceAnalyzer + MSMS (the reference implementation).
+Validated on the full positive cohort (N = 1,129) from the OpenBinder training set. Rosetta SC values were computed via InterfaceAnalyzer + MSMS (the reference implementation) under the predecessor NanoBinder-RF-v2 pipeline; the reference table is shipped at `data/sc_rosetta_reference.csv` to support Figure 1 regeneration without re-running PyRosetta.
 
 | Metric | Value |
 |--------|-------|
-| Pearson r | **0.837** (p = 3.4×10⁻¹⁴) |
-| Spearman ρ | 0.605 (p = 3.2×10⁻⁶) |
-| MAE | 0.244 |
+| Pearson r | **0.564** |
+| Spearman ρ | **0.611** |
+| MAE | **0.025** |
+| N | **1,129** |
 | Mean time/structure | 2.2 s (grid_spacing=0.5 Å, 6 workers) |
 
 **Optimal parameters:** `grid_spacing=0.5`, `interface_cutoff_prefilter=2.5`, `interface_cutoff=3.5`, aggregation=median of positive dot products.
@@ -93,15 +94,17 @@ Scatter plot: `docs/figures/sc_validation.pdf`
 
 ---
 
-## Why r=0.837 rather than 1.0
+## Why r=0.564 rather than 1.0
 
-The remaining gap is attributable to:
+On the full N = 1,129 cohort the small MAE (0.025) and moderate Spearman ρ (0.611) confirm that absolute values and rankings agree closely; the lower Pearson r reflects two documented algorithmic departures from Rosetta's published Sc statistic in addition to grid-resolution effects:
 
-1. **Grid resolution:** The 0.5 Å voxel grid approximates the SES, whereas MSMS uses exact analytical probe rolling. Reducing to 0.3 Å reduces the gap marginally but increases compute time 5×.
+1. **Hard cutoff vs exponential weighting:** Rosetta's published Sc uses an exponential weight `exp[-w·d²]` on the dot products, whereas this implementation applies a hard 3.5 Å cutoff with mean-of-medians aggregation. This is a deliberate simplification documented in §2.5 of the paper.
 
-2. **Outlier structures:** Three structures (3JBC, 3OGO, 3R0M) have Rosetta SC < 0.40 due to near-absence of a true interface (minimum heavy-atom distance ≥ 3.5 Å). The SES algorithm still finds surface-surface contacts in these structures and scores them higher than Rosetta does.
+2. **Grid resolution:** The 0.5 Å voxel grid approximates the SES, whereas MSMS uses exact analytical probe rolling. Reducing to 0.3 Å reduces the gap marginally but increases compute time 5×.
 
 3. **MSMS re-entrant detail:** MSMS computes analytically exact toroidal re-entrant patches. The grid SES approximates these with the distance-transform isosurface, which slightly smooths the concave geometry.
+
+`sc_connolly` therefore serves as a usable open-source proxy rather than a numerically faithful reproduction of Rosetta's Sc; it ranks among the top features in the trained models and contributes measurable AUROC.
 
 ---
 
