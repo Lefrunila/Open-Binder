@@ -62,7 +62,8 @@ def score_mlp(model_path: Path, X: np.ndarray, config: dict) -> np.ndarray:
     """Load an MLP checkpoint and score.  Relies on the checkpoint carrying
     scalers + hidden_dims so we can reconstruct the architecture."""
     import torch
-    import torch.nn as nn
+
+    from mlp_train import SingleBranchMLP  # noqa: E402
 
     ckpt = torch.load(model_path, map_location="cpu")
     mode = ckpt["mode"]
@@ -70,21 +71,12 @@ def score_mlp(model_path: Path, X: np.ndarray, config: dict) -> np.ndarray:
     dropout = ckpt["dropout"]
 
     if mode == "both":
-        # Two-branch; caller should have passed the concatenated matrix only if
-        # assemble_matrix flat path was used.  For the production scaffold we
-        # keep OOD MLP scoring simple and only support the single-branch flat
-        # case.  The LOO harness's "both" path uses the same flat matrix.
-        # Future work: load rest/unrest/extras separately.  For now, warn.
+        # Two-branch architecture (rest/unrest encoders + COCaDA + ESM head).
+        # Not yet wired through ood_eval — single flat-matrix modes only.
         raise NotImplementedError("ood_eval MLP two-branch mode not yet implemented")
 
     n_in = X.shape[1]
-    layers: list[nn.Module] = []
-    prev = n_in
-    for h in hidden:
-        layers.extend([nn.Linear(prev, h), nn.BatchNorm1d(h), nn.ReLU(), nn.Dropout(dropout)])
-        prev = h
-    layers.append(nn.Linear(prev, 1))
-    model = nn.Sequential(*layers)
+    model = SingleBranchMLP(n_features=n_in, hidden_dims=hidden, dropout=dropout)
     model.load_state_dict(ckpt["state_dict"])
     model.eval()
 
@@ -97,7 +89,9 @@ def score_mlp(model_path: Path, X: np.ndarray, config: dict) -> np.ndarray:
         X = (X - mean) / scale
 
     with torch.no_grad():
-        logits = model(torch.tensor(X, dtype=torch.float32)).squeeze(-1)
+        logits = model(torch.tensor(X, dtype=torch.float32))
+        if logits.ndim > 1:
+            logits = logits.squeeze(-1)
         probs = torch.sigmoid(logits).numpy()
     return probs
 
