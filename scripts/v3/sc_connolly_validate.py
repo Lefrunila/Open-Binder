@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """sc_connolly_validate.py — Validate SES-based SC against Rosetta MSMS values.
 
-Reads the first 50 structures from features_positives_openmm_v2.csv,
+Reads a deterministic random sample of 50 structures (random_state=42)
+from features_positives_openmm_v2.csv,
 computes SC via the grid-based SES method, and reports:
   - Pearson r, Spearman rho, MAE vs Rosetta sc column
   - Scatter plot saved to Open-Binder/docs/figures/sc_validation.pdf
@@ -70,11 +71,15 @@ def _run_one(args_tuple):
     f, pdb_path, kwargs = args_tuple
     t0 = time.time()
     try:
-        ag_chain = _get_antigen_chain(pdb_path)
+        # Use chain_ag="all" to match the original feature-extraction call in
+        # scripts/relaxation/03_extract_features.py (which unions every non-VHH
+        # chain into a single antigen surface and enables the closest-partner
+        # recovery fallback). The earlier "first non-H chain" heuristic produced
+        # spurious NaNs on multi-chain antigens (~3% of the cohort).
         sc = sc_connolly.compute_sc(
             pdb_path=pdb_path,
             chain_vhh="H",
-            chain_ag=ag_chain,
+            chain_ag="all",
             **kwargs,
         )
     except Exception as exc:
@@ -96,7 +101,7 @@ def run_validation(
     df_all = pd.read_csv(CSV_PATH)
     # Filter to valid sc values
     df_valid = df_all[df_all["sc"].notna() & (df_all["status"] == "OK")].copy()
-    df_sample = df_valid.head(n_structures).copy()
+    df_sample = df_valid.sample(n_structures, random_state=42).copy()
     print(f"\n{'='*60}")
     print(f"Variant: {label or 'default'}")
     print(f"  grid_spacing={grid_spacing}  interface_cutoff={interface_cutoff}  n={len(df_sample)}")
