@@ -78,14 +78,16 @@ After building per-chain SES meshes:
 
 ## Validation vs Rosetta MSMS
 
-Validated on the full positive cohort (N = 1,129) from the OpenBinder training set. Rosetta SC values were computed via InterfaceAnalyzer + MSMS (the reference implementation) under the predecessor NanoBinder-RF-v2 pipeline; the reference table is shipped at `data/sc_rosetta_reference.csv` to support Figure 1 regeneration without re-running PyRosetta.
+Validated on the positive cohort from the OpenBinder training set (N = 1,101 paired structures, after dropping 28 with PyRosetta extraction failures from the full cohort of 1,129). Rosetta SC values were computed via InterfaceAnalyzer + MSMS (the reference implementation) under the predecessor NanoBinder-RF-v2 pipeline; the reference table is shipped at `data/sc_rosetta_reference.csv` to support Figure 1 regeneration without re-running PyRosetta.
 
 | Metric | Value |
 |--------|-------|
-| Pearson r | **0.564** |
-| Spearman ρ | **0.611** |
-| MAE | **0.025** |
-| N | **1,129** |
+| Pearson r | **0.442** |
+| Spearman ρ | **0.482** |
+| MAE | **0.055** |
+| Mean Rosetta sc | **0.693** |
+| Mean Connolly sc | **0.731** |
+| N | **1,101** (after dropping 28 PyRosetta extraction failures) |
 | Mean time/structure | 2.2 s (grid_spacing=0.5 Å, 6 workers) |
 
 **Optimal parameters:** `grid_spacing=0.5`, `interface_cutoff_prefilter=2.5`, `interface_cutoff=3.5`, aggregation=median of positive dot products.
@@ -94,17 +96,15 @@ Scatter plot: `docs/figures/sc_validation.pdf`
 
 ---
 
-## Why r=0.564 rather than 1.0
+## Why r=0.44 rather than 1.0
 
-On the full N = 1,129 cohort the small MAE (0.025) and moderate Spearman ρ (0.611) confirm that absolute values and rankings agree closely; the lower Pearson r reflects two documented algorithmic departures from Rosetta's published Sc statistic in addition to grid-resolution effects:
+On the N = 1,101 cohort that survives PyRosetta extraction the mean values agree closely (Rosetta sc = 0.693 vs Connolly sc = 0.731, MAE = 0.055), but the Pearson correlation (r = 0.442, Spearman ρ = 0.482) is moderate rather than near-perfect. This reflects two genuinely different shape-complementarity implementations rather than a bug or numerical-precision gap:
 
-1. **Hard cutoff vs exponential weighting:** Rosetta's published Sc uses an exponential weight `exp[-w·d²]` on the dot products, whereas this implementation applies a hard 3.5 Å cutoff with mean-of-medians aggregation. This is a deliberate simplification documented in §2.5 of the paper.
+1. **Surface representation — grid SES vs MSMS triangulation:** This implementation builds the SES as the zero-isosurface of a signed distance field on a 0.5 Å voxel grid, then extracts a mesh via marching cubes. Rosetta's published Sc uses MSMS, which generates analytically exact probe-rolling triangulations including toroidal re-entrant patches. The two surface representations agree on coarse shape but differ in fine concave detail and in how vertices are distributed across saddle regions, which moves the per-vertex normal sums.
 
-2. **Grid resolution:** The 0.5 Å voxel grid approximates the SES, whereas MSMS uses exact analytical probe rolling. Reducing to 0.3 Å reduces the gap marginally but increases compute time 5×.
+2. **Aggregation — hard cutoff vs exponential weighting:** Rosetta's published Sc weights each dot product by `exp[-w·d²]` so that distant pairs contribute progressively less. This implementation applies a hard 3.5 Å cutoff and takes the mean of directional medians of positive dot products. Equally well-fitting interfaces can rank differently under the two aggregation rules.
 
-3. **MSMS re-entrant detail:** MSMS computes analytically exact toroidal re-entrant patches. The grid SES approximates these with the distance-transform isosurface, which slightly smooths the concave geometry.
-
-`sc_connolly` therefore serves as a usable open-source proxy rather than a numerically faithful reproduction of Rosetta's Sc; it ranks among the top features in the trained models and contributes measurable AUROC.
+The two effects compound, so a moderate r is expected even when both methods are computed correctly. `sc_connolly` therefore serves as a usable open-source proxy rather than a numerically faithful reproduction of Rosetta's Sc; it ranks among the top features in the trained models and contributes measurable AUROC.
 
 ---
 

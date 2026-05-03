@@ -145,6 +145,7 @@ def build_rf(cfg: dict) -> RandomForestClassifier:
         min_samples_split=int(rf_cfg.get("min_samples_split", 2)),
         class_weight=rf_cfg.get("class_weight", "balanced"),
         random_state=int(rf_cfg.get("random_state", 42)),
+        max_features=rf_cfg.get("max_features", "sqrt"),
         n_jobs=-1,
     )
 

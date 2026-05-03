@@ -25,7 +25,7 @@ mlp:
   lr: 1.0e-3
   weight_decay: 1.0e-4
   batch_size: 64
-  max_epochs: 100
+  max_epochs: 500
   patience: 10
 hold_out:
   orphan_assignments_tsv: data/orphan_training_assignments.tsv
