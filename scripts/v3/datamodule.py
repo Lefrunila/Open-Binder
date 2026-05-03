@@ -18,6 +18,18 @@ Responsibilities
 
 The class is config-driven so the trainer entry points (``rf_train`` /
 ``mlp_train``) and the LOO harness all see identical cohorts.
+
+LOO-correct ESM PCA
+-------------------
+For leave-one-out evaluation use the module-level ``fit_transform_esm_pca``
+function, which fits the StandardScaler + PCA on the **training rows only**
+and applies the fitted transform to both train and test.  This ensures the
+held-out trio never influences the principal-component axes (fixing the
+global-fit leakage of the original pipeline).
+
+For single-model training and inference, ``DataModule.prepare()`` still fits
+the PCA once on the full cohort (correct for inference — no test set exists)
+and persists it to ``models/checkpoints/esm_pca.joblib``.
 """
 
 from __future__ import annotations
@@ -42,6 +54,53 @@ from feature_combine import (
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent
+
+
+# ── Module-level ESM PCA helper (LOO-correct) ────────────────────────────────
+def fit_transform_esm_pca(
+    X_train: np.ndarray,
+    X_test: np.ndarray,
+    n_dims: int = 64,
+    seed: int = 42,
+) -> tuple[np.ndarray, np.ndarray, dict]:
+    """Fit ESM StandardScaler+PCA on training rows only, then transform both splits.
+
+    This is the LOO-correct counterpart of DataModule.esm_pca().  The test
+    fold's raw embeddings never influence the principal-component axes or the
+    scaler statistics, eliminating the global-fit leakage present when PCA is
+    fitted once on the full cohort (including held-out samples).
+
+    Uses ``svd_solver='full'`` for an exact, fully deterministic decomposition
+    (LAPACK dgesdd; ~25 s/fold on this machine for a 3384×3220 matrix).
+
+    Parameters
+    ----------
+    X_train : (n_train, d) array-like
+        Raw ESM embeddings for the training rows of one LOO fold.
+    X_test : (n_test, d) array-like
+        Raw ESM embeddings for the held-out test rows of the same fold.
+    n_dims : int
+        Number of PCA components to retain (default 64).
+    seed : int
+        random_state passed to PCA (unused by 'full' solver but kept for
+        documentation consistency).
+
+    Returns
+    -------
+    Z_train : (n_train, n_dims) float32
+    Z_test  : (n_test,  n_dims) float32
+    bundle  : dict with keys 'pca', 'mean', 'std' (for diagnostics)
+    """
+    X_train = np.asarray(X_train, dtype=np.float32)
+    X_test = np.asarray(X_test, dtype=np.float32)
+    mean = X_train.mean(axis=0)
+    std = X_train.std(axis=0) + 1e-8
+    Xs_train = (X_train - mean) / std
+    Xs_test = (X_test - mean) / std
+    pca = PCA(n_components=n_dims, svd_solver="full", random_state=seed)
+    Z_train = pca.fit_transform(Xs_train).astype(np.float32)
+    Z_test = pca.transform(Xs_test).astype(np.float32)
+    return Z_train, Z_test, {"pca": pca, "mean": mean, "std": std}
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -283,19 +342,17 @@ class DataModule:
     ) -> np.ndarray:
         """Fit (or reuse) a PCA on the ESM embedding block and project.
 
+        Used by single-model training (fit=True on the full cohort) and by
+        inference (fit=False, reusing the cached bundle).  For LOO evaluation
+        use the module-level ``fit_transform_esm_pca`` instead, which refits
+        per fold on training rows only.
+
         ``fit=True`` fits a fresh PCA on ``X`` and caches it on the instance.
-        ``fit=False`` applies the cached projection (used for LOO folds where
-        the PCA is fit once on the full cohort so every fold sees a
-        consistent embedding space).
+        ``fit=False`` applies the cached projection.
 
         ``save_path``: if provided and fit=True, the fitted PCA object (along
         with the scaler mean/std) is saved to this path via joblib so that
-        inference can load it without access to the training data (Bug 7 fix).
-
-        We do NOT refit per-fold by default: the ESM embedding is a
-        sample-level sequence representation, so leakage risk is minimal
-        compared to the feature-to-label signal, and refitting per fold would
-        destabilise LOO significantly for N=3000.
+        inference can load it without access to the training data.
         """
         if n_dims is None:
             n_dims = int(self.config.get("esm_pca_dims", 64))
@@ -351,20 +408,35 @@ class DataModule:
         return out
 
     # ── Convenience: full pipeline ───────────────────────────────────────
-    def prepare(self, save_esm_pca: Path | None = None) -> pd.DataFrame:
-        """Run the full load → hold-out → error-drop → PCA pipeline.
+    def prepare(
+        self,
+        save_esm_pca: Path | None = None,
+        deferred_esm_pca: bool = False,
+    ) -> pd.DataFrame:
+        """Run the full load → hold-out → error-drop → (optionally) PCA pipeline.
 
         ``save_esm_pca``: if provided, the fitted ESM PCA bundle
         (pca + scaler mean/std) is saved to this path via joblib so that
-        inference can load it without the training data (Bug 7 fix).
+        inference can load it without the training data.
         When None, defaults to ``models/checkpoints/esm_pca.joblib``
         relative to the project root so training always produces the file.
+        Ignored when ``deferred_esm_pca=True``.
+
+        ``deferred_esm_pca``: when True, skip ``attach_esm_pca`` and return
+        the DataFrame with raw ``esm_embed_*`` columns intact.  The caller
+        (e.g. the LOO harness) is then responsible for calling
+        ``fit_transform_esm_pca`` per fold on training rows only, which
+        eliminates the global-fit leakage of the default path.
         """
-        if save_esm_pca is None:
-            save_esm_pca = self.project_root / "models" / "checkpoints" / "esm_pca.joblib"
         df = self.load_features()
         df = self.apply_holdout(df)
         if self.config.get("hold_out", {}).get("drop_error_rows", True):
             df = self.drop_error_rows(df)
-        df = self.attach_esm_pca(df, fit=True, save_path=save_esm_pca)
+        if deferred_esm_pca:
+            print("[datamodule] prepare: ESM PCA deferred — raw esm_embed_* cols retained "
+                  "for per-fold LOO refit.", flush=True)
+        else:
+            if save_esm_pca is None:
+                save_esm_pca = self.project_root / "models" / "checkpoints" / "esm_pca.joblib"
+            df = self.attach_esm_pca(df, fit=True, save_path=save_esm_pca)
         return df

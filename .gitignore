@@ -46,11 +46,16 @@ models/loo/
 # Training output directories (regeneratable from configs + data)
 models/runs/
 models/loo_rerun/
+models/loo_results/
+# Legacy leaky-PCA baseline kept locally for personal comparison; not shipped.
 models/loo_connolly_sc/
+
+# Mirror of docs/figures/ created by generate_figures.py for convenience
+/figures/
 
 # Results / intermediate outputs
 results/
-results/logs_*/
+results/logs/
 intermediates/
 
 # Large data files excluded from git (available on Google Drive)
@@ -64,10 +69,8 @@ data/*.log
 !models/checkpoints/*/meta.json
 !models/checkpoints/*/metrics.json
 !models/checkpoints/esm_pca.joblib
-!models/loo/*/pooled_metrics.json
-!models/loo/*/pass_rate_by_antigen.csv
-!models/loo_connolly_sc/*/pooled_metrics.json
-!models/loo_connolly_sc/*/pass_rate_by_antigen.csv
+!models/loo_results/*/pooled_metrics.json
+!models/loo_results/*/pass_rate_by_antigen.csv
 
 # Logs
 logs/

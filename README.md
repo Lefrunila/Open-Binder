@@ -18,7 +18,7 @@ validation.
   closed-source tools
 - **RF + MLP models** evaluated by leave-one-out cross-validation (LOO) over 1,129
   antigen stems
-- **Best model** (MLP, `both_all`): LOO AUROC 0.9339, AUPRC 0.8620, pass rate 87.9%
+- **Best model** (MLP, `both_all`): LOO AUROC 0.9345, AUPRC 0.8642, pass rate 87.9%
 
 > **Use both models together to decide what goes to the wet lab.**
 > The RF and MLP fail on different structures. Running them in sequence: RF as a
@@ -32,12 +32,14 @@ validation.
 
 | Model           | Features | AUROC  | AUPRC  | Pass rate |
 |-----------------|--------:|------:|------:|----------:|
-| rf_rest         |      95 | 0.9073 | 0.7980 | 86.8%    |
-| rf_unrest       |      95 | 0.9022 | 0.7837 | 85.6%    |
-| rf_both_delta   |     122 | 0.9276 | 0.8488 | 88.0%    |
-| rf_both_raw     |     126 | 0.9133 | 0.8133 | 87.4%    |
-| rf_both_all     |     153 | 0.9286 | 0.8500 | 87.6%    |
-| **mlp_both_all**| **153** | **0.9339** | **0.8620** | **87.9%** |
+| rf_rest         |      95 | 0.9080 | 0.7981 | 86.9%    |
+| rf_unrest       |      95 | 0.9039 | 0.7869 | 85.6%    |
+| rf_both_raw     |     126 | 0.9127 | 0.8147 | 87.6%    |
+| rf_both_delta   |     122 | 0.9287 | 0.8510 | 89.0%    |
+| rf_both_all     |     153 | 0.9288 | 0.8501 | 87.9%    |
+| **mlp_both_all**| **153** | **0.9345** | **0.8642** | **87.9%** |
+
+Source: `models/loo_results/<config>/pooled_metrics.json`.
 
 ## Quick start
 
@@ -121,7 +123,7 @@ Open-Binder/
 │   └── structures/     full PDB tarballs, ~1.1 GB compressed (Git LFS)
 ├── models/
 │   ├── checkpoints/    trained model artifacts
-│   └── loo/            per-fold LOO results
+│   └── loo_results/    per-fold LOO results
 ├── examples/           example input PDB
 └── docs/               supplementary writeups
 ```
@@ -148,7 +150,7 @@ Alternatively, browse the Drive folder and download files manually.
 The `weights/` folder contains one file per model; `structures/` contains six tarballs
 (see `data/structures/README.md` for the full inventory).
 
-The full per-fold LOO result JSONs (`models/loo_connolly_sc/`) are also available on
+The full per-fold LOO result JSONs (`models/loo_results/`) are also available on
 Google Drive for reproducibility. These files are excluded from the git repository due
 to size (27 MB, 1,129 per-fold JSON files across 6 configurations); only the pooled
 summary files (`pooled_metrics.json`, `pass_rate_by_antigen.csv`) are tracked in git.
@@ -169,7 +171,7 @@ python scripts/v3/mlp_train.py --config configs/mlp_both_all.yaml \
     --output-dir models/runs/mlp_both_all/
 
 # LOO benchmark — reproduces the results table (all 6 configs, ~4 h)
-python scripts/v3/run_loo_connolly_sc.py
+python scripts/v3/run_loo.py
 ```
 
 ### Train on your own dataset

@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""run_loo_connolly_sc.py
+"""run_loo.py
 
-Runner for all 6 OpenBinder LOO configs using Connolly SES sc feature CSVs.
-RF configs run in parallel (multiprocessing); MLP runs after on GPU.
+Runner for all 6 OpenBinder LOO configs. RF configs run in parallel
+(multiprocessing); MLP runs after on GPU. ESM PCA is refit per fold inside
+``loo_harness.py`` (no global-cohort leakage).
 
 Outputs:
-  models/loo_connolly_sc/<config>/per_fold/*.json
-  models/loo_connolly_sc/<config>/pooled_metrics.json
-  models/loo_connolly_sc/<config>/pass_rate_by_antigen.csv
-  results/loo_<config>_connolly_sc.csv   (per-fold flat CSV)
-  results/loo_summary_connolly_sc.csv    (aggregate comparison table)
+  models/loo_results/<config>/per_fold/*.json
+  models/loo_results/<config>/pooled_metrics.json
+  models/loo_results/<config>/pass_rate_by_antigen.csv
+  results/loo_<config>.csv               (per-fold flat CSV)
+  results/loo_summary.csv                (aggregate comparison table)
+
+(Renamed from ``run_loo_connolly_sc.py`` after the Connolly SES feature became
+the canonical sc implementation; the old "connolly_sc" suffix served only to
+distinguish that intermediate run from the prior MSMS-based one.)
 """
 from __future__ import annotations
 
@@ -32,7 +37,7 @@ HARNESS = SCRIPT_DIR / "loo_harness.py"
 COMPARE = SCRIPT_DIR / "loo_compare.py"
 
 CONFIGS_DIR = PROJECT_ROOT / "configs"
-LOO_BASE = PROJECT_ROOT / "models" / "loo_connolly_sc"
+LOO_BASE = PROJECT_ROOT / "models" / "loo_results"
 RESULTS_DIR = PROJECT_ROOT / "results"
 
 RF_CONFIGS = [
@@ -46,7 +51,7 @@ MLP_CONFIGS = [
     "mlp_both_all",
 ]
 
-LOG_DIR = PROJECT_ROOT / "results" / "logs_connolly_sc"
+LOG_DIR = PROJECT_ROOT / "results" / "logs"
 
 
 def run_one_config(cfg_name: str, device: str | None = None) -> tuple[str, int]:
@@ -226,7 +231,7 @@ def main():
             print(f"[runner] WARNING: {cfg} per_fold dir missing, skipping metrics", flush=True)
             continue
         # Save per-fold flat CSV
-        out_csv = RESULTS_DIR / f"loo_{cfg}_connolly_sc.csv"
+        out_csv = RESULTS_DIR / f"loo_{cfg}.csv"
         per_fold_to_csv(run_dir, out_csv)
         # Compute aggregate metrics
         m = pool_metrics(run_dir)
@@ -234,7 +239,7 @@ def main():
 
     if summary_rows:
         summary_df = pd.DataFrame(summary_rows)
-        summary_path = RESULTS_DIR / "loo_summary_connolly_sc.csv"
+        summary_path = RESULTS_DIR / "loo_summary.csv"
         summary_df.to_csv(summary_path, index=False)
         print(f"\n[runner] Summary saved to {summary_path}", flush=True)
         print(f"\n{'='*80}", flush=True)

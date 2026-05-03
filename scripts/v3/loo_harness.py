@@ -64,8 +64,14 @@ from sklearn.preprocessing import StandardScaler
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from datamodule import DataModule, resolve_path  # noqa: E402
-from feature_combine import assemble_matrix  # noqa: E402
+from datamodule import DataModule, fit_transform_esm_pca, resolve_path  # noqa: E402
+from feature_combine import (  # noqa: E402
+    assemble_matrix,
+    esm_pca_cols,
+    feature_cols_both_rf,
+    feature_cols_rest,
+    feature_cols_unrest,
+)
 
 
 NEG_PATTERN = re.compile(r"^neg_(.+?)__vhh_")
@@ -271,10 +277,35 @@ def main() -> None:
     dm = DataModule.from_config(args.config)
     cfg = dm.config
     model_type = cfg["model_type"]
-
-    df = dm.prepare()
+    mode = cfg["feature_mode"]
     esm_dims = int(cfg.get("esm_pca_dims", 64))
-    X_all, feature_cols = assemble_matrix(df, cfg["feature_mode"], esm_dims)
+
+    # deferred_esm_pca=True: keep raw esm_embed_* cols; PCA is refit per fold
+    # on training rows only (LOO-correct, no test-fold leakage).
+    df = dm.prepare(deferred_esm_pca=True)
+
+    # Split raw ESM block from physics columns.
+    esm_raw_cols: list[str] = dm._esm_feat_cols  # 3220 raw embedding cols
+    if esm_raw_cols:
+        esm_raw = df[esm_raw_cols].values.astype(np.float32)  # (N, 3220)
+        df_phys = df.drop(columns=esm_raw_cols)
+    else:
+        esm_raw = np.zeros((len(df), 0), dtype=np.float32)
+        df_phys = df
+
+    # Pre-compute canonical feature column names (for logging; values recomputed per fold).
+    if mode == "rest":
+        feature_cols = feature_cols_rest(esm_dims)
+    elif mode == "unrest":
+        feature_cols = feature_cols_unrest(esm_dims)
+    elif mode in ("both", "both_delta", "both_raw", "both_all"):
+        variant = "all" if mode == "both" else mode.split("_", 1)[1]
+        feature_cols = feature_cols_both_rf(esm_dims, variant=variant)
+    else:
+        raise ValueError(f"[loo] unknown feature_mode {mode!r}")
+
+    _pca_col_names = esm_pca_cols(esm_dims)
+
     y_all = dm.build_labels(df)
     files_all = df["file"].astype(str).values
     file_to_idx = {f: i for i, f in enumerate(files_all)}
@@ -314,8 +345,9 @@ def main() -> None:
     if args.max_folds is not None:
         fold_stems = fold_stems[:args.max_folds]
 
-    print(f"[loo] folds={len(fold_stems)} model={model_type} mode={cfg['feature_mode']} "
-          f"features={X_all.shape[1]} cohort={len(y_all)}", flush=True)
+    print(f"[loo] folds={len(fold_stems)} model={model_type} mode={mode} "
+          f"features={len(feature_cols)} cohort={len(y_all)} "
+          f"[ESM PCA refit per fold, svd_solver=full]", flush=True)
 
     # Device setup for MLP
     device = None
@@ -348,8 +380,29 @@ def main() -> None:
         held_mask[held_idx] = True
         tr_mask = ~held_mask
 
-        X_tr, y_tr = X_all[tr_mask], y_all[tr_mask]
-        X_te, y_te = X_all[held_mask], y_all[held_mask]
+        # Per-fold ESM PCA: fit on training rows only, transform both splits.
+        t_pca = time.time()
+        Z_tr_esm, Z_te_esm, pca_bundle = fit_transform_esm_pca(
+            esm_raw[tr_mask], esm_raw[held_mask], n_dims=esm_dims, seed=42
+        )
+        pca_elapsed = time.time() - t_pca
+
+        if i == 1:
+            evr5 = pca_bundle["pca"].explained_variance_ratio_[:5]
+            print(f"[loo] fold-1 PCA: t={pca_elapsed:.2f}s  "
+                  f"top-5 EV%={np.round(evr5 * 100, 1).tolist()}", flush=True)
+
+        # Build fold df slices with per-fold ESM PCA columns attached.
+        df_tr_fold = df_phys[tr_mask].copy().reset_index(drop=True)
+        df_te_fold = df_phys[held_mask].copy().reset_index(drop=True)
+        for k, col in enumerate(_pca_col_names):
+            df_tr_fold[col] = Z_tr_esm[:, k]
+            df_te_fold[col] = Z_te_esm[:, k]
+
+        X_tr, _ = assemble_matrix(df_tr_fold, mode, esm_dims)
+        X_te, _ = assemble_matrix(df_te_fold, mode, esm_dims)
+        y_tr = y_all[tr_mask]
+        y_te = y_all[held_mask]
         files_te = files_all[held_mask]
 
         epochs_trained: int | None = None

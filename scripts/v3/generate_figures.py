@@ -28,11 +28,12 @@ import pandas as pd
 # ── Paths ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent  # Open-Binder/
-# Connolly SES shape-complementarity LOO results (all 1129 folds, open-source sc)
-LOO_BASE = PROJECT_ROOT / "models" / "loo_connolly_sc"
+# LOO results: per-fold StandardScaler + PCA refit on training rows only,
+# 1129 folds, open-source Connolly SES sc.  No global-cohort leakage.
+LOO_BASE = PROJECT_ROOT / "models" / "loo_results"
 CHECKPOINT_DIR = PROJECT_ROOT / "models" / "checkpoints" / "rf_both_all"
 OUT_DIR = PROJECT_ROOT / "docs" / "figures"
-COPY_DIR = PROJECT_ROOT / "docs" / "figures"
+COPY_DIR = PROJECT_ROOT / "figures"
 
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 COPY_DIR.mkdir(parents=True, exist_ok=True)
