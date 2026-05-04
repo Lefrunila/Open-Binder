@@ -88,11 +88,11 @@ def make_scatter(
     ax.set_aspect("equal")
     ax.set_xlabel("PyRosetta InterfaceAnalyzer SC (Lawrence–Colman)")
     ax.set_ylabel("OpenBinder Connolly SES SC (sc_connolly)")
-    ax.set_title(
-        f"{label} — Rosetta InterfaceAnalyzer vs Connolly SES, "
-        f"r={r:.3f} ρ={rho:.3f} N={n}",
-        fontsize=10,
-    )
+    title_parts = []
+    if label:
+        title_parts.append(label)
+    title_parts.append(f"r = {r:.3f}, ρ = {rho:.3f}, N = {n}")
+    ax.set_title(" — ".join(title_parts), fontsize=10)
     ax.legend(loc="lower right", fontsize=8)
 
     plt.tight_layout()
@@ -118,8 +118,8 @@ def main() -> None:
     parser.add_argument(
         "--label",
         type=str,
-        default="gs=0.5 pf=2.5 ic=3.5",
-        help="Variant label for the figure title.",
+        default="",
+        help="Optional variant label prepended to the figure title.",
     )
     args = parser.parse_args()
 
