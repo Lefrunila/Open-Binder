@@ -186,6 +186,10 @@ def fit_mlp_fold(
     max_ep = int(mlp_cfg.get("max_epochs", 100))
     patience = int(mlp_cfg.get("patience", 10))
 
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
     # Stratified internal val split (on training set only — X_te is the held-out trio)
     idx_tr, idx_va = train_test_split(
         np.arange(len(y_tr)),
